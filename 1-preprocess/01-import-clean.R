@@ -316,7 +316,22 @@ time_series_month <- raw_timeseries %>%
            factor(),
          city = str_to_title(city) %>% factor())
 
+# Add 2020's individual data for the monthly time series plot
+time_series_2020 <- esismal %>% 
+  filter(year_dx == 2020) %>% 
+  group_by(year_dx, month_dx, province, city) %>% 
+  summarise(case = n()) %>% 
+  ungroup()
 
+time_series_2020 <- time_series_2020 %>% 
+  mutate(day = rep(1, dim(time_series_2020)[1]),
+         date = str_c(year_dx, '-', month_dx, '-', day),
+         date = ymd(date)) %>% 
+  rename(year = year_dx,
+         month = month_dx) %>% 
+  select(year, month, date, province, city, case)
+
+time_series_month <- bind_rows(time_series_month, time_series_2020)
 
 # Appendix ----------------------------------------------------------------
 
