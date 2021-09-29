@@ -333,6 +333,59 @@ time_series_2020 <- time_series_2020 %>%
 
 time_series_month <- bind_rows(time_series_month, time_series_2020)
 
+# Add 2018's aggregate data
+time_series_2018 <- raw_timeseries_2018 %>% 
+  filter(Provinsi == 'Papua' | Provinsi == 'Papua Barat')
+
+time_series_2018 <- time_series_2018 %>% 
+  mutate(year = rep(2018, nrow(time_series_2018))) %>% 
+  select(year, month, Provinsi, `Kabupaten/Kota`, Positif) %>% 
+  rename(province = Provinsi,
+         city = `Kabupaten/Kota`,
+         case = Positif) %>% 
+  mutate(province = if_else(province == 'Papua Barat','West Papua', province),
+         province = factor(province),
+         city = str_to_title(city) %>% factor(),
+         day = rep(1, nrow(time_series_2018)),
+         date = str_c(year, '-', month, '-', day),
+         date = ymd(date)) %>% 
+  select(-day) %>% 
+  relocate(date, .after = 2) %>% 
+  mutate(case = if_else(is.na(case), 0, case))
+
+time_series_month <- bind_rows(time_series_month, time_series_2018) %>% 
+  arrange(year)
+
+# Replace 2019's aggregate with individual data
+time_series_2019 <- esismal %>%
+  filter(year_dx == 2019) %>%
+  group_by(year_dx, month_dx, province, city) %>%
+  summarise(case = n()) %>%
+  ungroup()
+
+time_series_2019 <- time_series_2019 %>%
+  mutate(day = rep(1, dim(time_series_2019)[1]),
+         date = str_c(year_dx, '-', month_dx, '-', day),
+         date = ymd(date)) %>%
+  rename(year = year_dx,
+         month = month_dx) %>%
+  select(year, month, date, province, city, case)
+
+## Remove aggregate
+time_series_month <- filter(time_series_month, year != 2019) 
+
+## Replace with individual data
+time_series_month <- bind_rows(time_series_month, time_series_2019) %>% 
+  arrange(year)
+
+# Save --------------------------------------------------------------------
+
+esismal %>% write_rds(file = here("0-data", "esismal.rds"))
+time_series_month %>% write_rds(file = here("0-data", "time-series-month.rds"))
+time_series_year %>%
+  select(year, province, pop) %>%
+  write_rds(file = here("0-data", "population-size.rds"))
+
 # Appendix ----------------------------------------------------------------
 
 sessioninfo::platform_info()
