@@ -380,8 +380,20 @@ time_series_month <- bind_rows(time_series_month, time_series_2019) %>%
 
 # Save --------------------------------------------------------------------
 
+## 2019-2020 individual data
 esismal %>% write_rds(file = here("0-data", "esismal.rds"))
+
+## For time-series per month
 time_series_month %>% write_rds(file = here("0-data", "time-series-month.rds"))
+
+## Mixed incorporated into mono (aggregate data derived from individual)
+### P. falciparum
+
+
+### P. vivax
+
+
+## Province and year-specific population sizes
 time_series_year %>%
   select(year, province, pop) %>%
   write_rds(file = here("0-data", "population-size.rds"))
