@@ -143,7 +143,9 @@ esismal <- raw_esismal %>%
     # Administrative areas
     province = str_to_title(nama_propinsi),
     city = str_to_title(nama_kabupaten),
-    health_unit = str_to_title(nama_fasyankes)
+    health_unit = str_to_title(nama_fasyankes),
+    
+    # 
   ) %>%
   
   # Select only those variables required
@@ -378,6 +380,9 @@ time_series_month <- filter(time_series_month, year != 2019)
 time_series_month <- bind_rows(time_series_month, time_series_2019) %>% 
   arrange(year)
 
+# Mixed incorporated into monoinfections for P. falciparum and vivax
+
+
 # Save --------------------------------------------------------------------
 
 ## 2019-2020 individual data
@@ -386,12 +391,42 @@ esismal %>% write_rds(file = here("0-data", "esismal.rds"))
 ## For time-series per month
 time_series_month %>% write_rds(file = here("0-data", "time-series-month.rds"))
 
-## Mixed incorporated into mono (aggregate data derived from individual)
-### P. falciparum
-
-
-### P. vivax
-
+## Mixed incorporated into mono (aggregate data derived from individual),
+## minor species excluded
+esismal %>% 
+  filter(sp == 'P. falciparum' |
+         sp == 'P. vivax'|
+         sp == 'P. falciparum/vivax') %>% 
+  group_by(province, year_dx, month_dx, sex, sp) %>% 
+  summarise(n_case = n()) %>%
+  na.omit(sex) %>% 
+  pivot_wider(names_from = sp,
+              values_from = n_case) %>%
+  mutate(`P. vivax` = `P. vivax` + `P. falciparum/vivax`,
+         `P. falciparum` = `P. falciparum` + `P. falciparum/vivax`) %>% 
+  select(-`P. falciparum/vivax`) %>% 
+  ungroup() %>% 
+  mutate(date = str_c('1', '-', month_dx, '-', year_dx) %>% dmy()) %>% 
+  select(-month_dx) %>% 
+  relocate(date, .before = sex) %>% 
+  pivot_longer(cols = starts_with('P. '),
+               names_to = 'sp',
+               values_to = 'n_case') %>% 
+  mutate(cat = case_when(sex == "Male" &
+                         sp == "P. falciparum" ~ "P. falciparum in males",
+                         sex == "Male" &
+                         sp == "P. vivax" ~ "P. vivax in males",
+                         sex == "Female" &
+                         sp == "P. falciparum" ~ "P. falciparum in females",
+                         sex == "Female" &
+                         sp == "P. vivax" ~ "P. vivax in females",
+                         TRUE ~ "Other") %>% 
+           as.factor(),
+         cat = ordered(cat, levels = c("P. vivax in males",
+                                       "P. vivax in females",
+                                       "P. falciparum in males",
+                                       "P. falciparum in females"))) %>% 
+  write_rds(file = here("0-data", "monoinfection.rds"))
 
 ## Province and year-specific population sizes
 time_series_year %>%
@@ -401,23 +436,3 @@ time_series_year %>%
 # Appendix ----------------------------------------------------------------
 
 sessioninfo::platform_info()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
