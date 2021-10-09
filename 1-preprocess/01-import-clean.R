@@ -21,9 +21,9 @@ library(here)       # Navigate files
 # Import ------------------------------------------------------------------
 
 # Read in the raw data
-## 2019-2020's individual data
+# 2019-2020's individual data
 raw_esismal <- here("0-data", # Includes 2020's data
-                    "esismal 2019-2020_ieprocess210801.dta") %>% 
+                    "esismal 2019-2020_ieprocess210801.dta") %>%
   read_dta()
 
 ## 2010-2020's aggregate data, not including 2018
@@ -143,9 +143,7 @@ esismal <- raw_esismal %>%
     # Administrative areas
     province = str_to_title(nama_propinsi),
     city = str_to_title(nama_kabupaten),
-    health_unit = str_to_title(nama_fasyankes),
-    
-    # 
+    health_unit = str_to_title(nama_fasyankes)
   ) %>%
   
   # Select only those variables required
@@ -436,3 +434,4 @@ time_series_year %>%
 # Appendix ----------------------------------------------------------------
 
 sessioninfo::platform_info()
+
