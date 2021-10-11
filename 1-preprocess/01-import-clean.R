@@ -26,6 +26,10 @@ raw_esismal <- here("0-data", # Includes 2020's data
                     "esismal 2019-2020_ieprocess210801.dta") %>%
   read_dta()
 
+# raw_esismal2 <- here("0-data", # Includes 2020's data
+#                      "20192020Regmal1-21092021_clean_master.csv") %>%
+#   read_csv()
+
 ## 2010-2020's aggregate data, not including 2018
 raw_timeseries <- here("0-data", "pcd_data_papua.csv") %>% read_csv()
 
@@ -143,7 +147,35 @@ esismal <- raw_esismal %>%
     # Administrative areas
     province = str_to_title(nama_propinsi),
     city = str_to_title(nama_kabupaten),
-    health_unit = str_to_title(nama_fasyankes)
+    health_unit = str_to_title(nama_fasyankes),
+    hu_type = case_when(
+      # Puskesmas
+      str_detect(string = health_unit,
+                 pattern = regex('puskesmas', ignore_case = TRUE)) |
+      str_detect(string = health_unit,
+                 pattern = regex('pkm', ignore_case = TRUE)) ~
+      'Health centre',
+      
+      # Rumah Sakit
+      str_detect(string = health_unit,
+                 pattern = regex('rumah sakit', ignore_case = TRUE)) |
+      str_detect(string = health_unit,
+                 pattern = regex('rumkit', ignore_case = TRUE)) |
+      str_detect(string = health_unit,
+                 pattern = regex('rs', ignore_case = TRUE)) ~
+      'Hospital',
+      
+      # Klinik or Balai Pengobatan
+      str_detect(string = health_unit,
+                 pattern = regex('klinik', ignore_case = TRUE)) |
+      str_detect(string = health_unit,
+                 pattern = regex('balai pengobatan', ignore_case = TRUE)) |
+      str_detect(string = health_unit,
+                 pattern = regex('bp', ignore_case = TRUE)) ~
+      'Clinic',
+      
+      TRUE ~ 'Other'
+    ) |> factor()
   ) %>%
   
   # Select only those variables required
@@ -151,7 +183,8 @@ esismal <- raw_esismal %>%
          date_dx, week_dx, month_dx, year_dx, # Date of visit
          sp, # Parasite diagnosis
          age, sex, # Age and sex
-         province, city, health_unit) %>%
+         province, city, health_unit,
+         hu_type) %>%
   
   # Filter only those in Papua and West Papua
   filter(province == "Papua" | province == "Papua Barat") %>% 

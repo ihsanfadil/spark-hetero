@@ -1581,15 +1581,75 @@ ggsave(filename = "figure_s3.png",
 
 # Exploratory graphs ------------------------------------------------------
 
+colours_four <- c('#5c3c92', '#a2d5c6', '#077b8a', '#d72631')
 
+# Health unit types by district
+fig_s4a <- esismal |> 
+  mutate(city = factor(city, levels = c('Health centre',
+                                        'Hospital',
+                                        'Clinic',
+                                        'Other')),
+         city2 = reorder(esismal$city,
+                         esismal$hu_type,
+                         FUN = function(x) mean(as.numeric(x)))) |> 
+  filter(province == 'Papua') |> 
+  ggplot(aes(y = city2,
+             fill = hu_type)) +
+    geom_bar(position = 'fill') +
+    scale_fill_manual(values = colours_four) +
+    facet_grid(cols = vars(year_dx)) +
+    theme(legend.position = 'none') +
+    scale_y_discrete(expand = c(0, 0)) +
+    labs(y = '',
+         x = '')
 
+fig_s4b <- esismal |> 
+  mutate(city = factor(city, levels = c('Health centre',
+                                        'Hospital',
+                                        'Clinic',
+                                        'Other')),
+         city2 = reorder(esismal$city,
+                         esismal$hu_type,
+                         FUN = function(x) mean(as.numeric(x)))) |> 
+  filter(province == 'West Papua') |> 
+  ggplot(aes(y = city2,
+             fill = hu_type)) +
+  geom_bar(position = 'fill') +
+  scale_fill_manual(values = colours_four) +
+  facet_grid(cols = vars(year_dx)) +
+  theme(legend.position = "bottom",
+        legend.justification = "right",
+        legend.direction = "horizontal",
+        axis.text.x = element_text(size = 6),
+        panel.spacing = unit(1, "lines"),
+        legend.spacing.x = unit(0.05, "cm"),
+        legend.margin = margin(0, 0, 0, 0),
+        legend.box.margin = margin(0, 0, 0, 0),
+        legend.text = element_text(margin = margin(r = 5, unit = "mm"))) +
+  scale_y_discrete(expand = c(0, 0)) +
+  labs(y = '',
+       x = '\nProportion of health units')
 
+fig_s4a
+fig_s4b
 
+fig_s4 <- plot_grid(fig_s4a,
+                    fig_s4b,
+                    ncol = 1, align = "v",
+                    labels = c('A', 'B'),
+                    label_size = 10,
+                    rel_heights = c(1, 0.65),
+                    rel_widths = c(1, 1),
+                    label_y = 1,
+                    label_x = 0)
 
+fig_s4
 
-
-
-
+ggsave(filename = "fig_s4.png",
+       path = here::here("0-graph"),
+       width = 7,
+       height = 9,
+       dpi = 600)
 
 
 
