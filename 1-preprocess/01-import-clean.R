@@ -400,7 +400,8 @@ esismal %>%
   na.omit(sex) %>% 
   pivot_wider(names_from = sp,
               values_from = n_case) %>%
-  mutate(`P. vivax` = `P. vivax` + `P. falciparum/vivax`,
+  mutate(`P. falciparum/vivax` = `P. falciparum/vivax` / 2,
+         `P. vivax` = `P. vivax` + `P. falciparum/vivax`,
          `P. falciparum` = `P. falciparum` + `P. falciparum/vivax`) %>% 
   select(-`P. falciparum/vivax`) %>% 
   ungroup() %>% 
@@ -423,7 +424,7 @@ esismal %>%
          cat = ordered(cat, levels = c("P. vivax in males",
                                        "P. vivax in females",
                                        "P. falciparum in males",
-                                       "P. falciparum in females"))) %>% 
+                                       "P. falciparum in females"))) %>%
   write_rds(file = here("0-data", "monoinfection.rds"))
 
 ## Province and year-specific population sizes
