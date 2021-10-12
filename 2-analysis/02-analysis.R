@@ -217,41 +217,6 @@ sex_species <- monthly_incidence %>%
 
 sex_species
   
-esismal <- esismal %>% 
-  mutate(age_cat = case_when(age < 5 ~ "0-4",
-                             age < 10 ~ "5-9",
-                             age < 15 ~ "10-14",
-                             age < 20 ~ "15-19",
-                             age < 25 ~ "20-24",
-                             age < 30 ~ "25-29",
-                             age < 35 ~ "30-34",
-                             age < 40 ~ "35-39",
-                             age < 45 ~ "40-44",
-                             age < 50 ~ "45-49",
-                             age < 55 ~ "50-54",
-                             age < 60 ~ "55-59",
-                             age < 65 ~ "60-64",
-                             age < 70 ~ "65-69",
-                             age < 75 ~ "70-74",
-                             age >= 75 ~ "75+",
-                             TRUE ~ NA_character_) %>% as.factor(),
-         age_cat = ordered(age_cat, levels = c("0-4",
-                                               "5-9",
-                                               "10-14",
-                                               "15-19",
-                                               "20-24",
-                                               "25-29",
-                                               "30-34",
-                                               "35-39",
-                                               "40-44",
-                                               "45-49",
-                                               "50-54",
-                                               "55-59",
-                                               "60-64",
-                                               "65-69",
-                                               "70-74",
-                                               "75+")))
-  
 api_age <- esismal %>% 
   filter(year_dx == 2020) %>% 
   group_by(province, age_cat, sex, sp) %>% 
@@ -1334,7 +1299,7 @@ gini_index <- function(data) { # Data must contain `p_i` and `c_i`
 
 # District level
 # set.seed(13)
-n_boot <- 10^4
+n_boot <- 10^2
 
 ci_pi <- function(data) {
   df <- data %>% 
@@ -1581,40 +1546,46 @@ ggsave(filename = "figure_s3.png",
 
 # Exploratory graphs ------------------------------------------------------
 
-colours_four <- c('#5c3c92', '#a2d5c6', '#077b8a', '#d72631')
+colours_four <- c('#077b8a', '#a2d5c6', '#5c3c92', '#d72631')
 
 # Health unit types by district
-fig_s4a <- esismal |> 
-  mutate(city = factor(city, levels = c('Health centre',
-                                        'Hospital',
-                                        'Clinic',
-                                        'Other')),
+(fig_s4a <- esismal |> 
+  mutate(hu_type = factor(hu_type, levels = c('Hospital',
+                                              'Health centre',
+                                              'Clinic',
+                                              'Other')),
          city2 = reorder(esismal$city,
                          esismal$hu_type,
-                         FUN = function(x) mean(as.numeric(x)))) |> 
+                         FUN = function(x) mean(as.numeric(x)))) |>
   filter(province == 'Papua') |> 
   ggplot(aes(y = city2,
              fill = hu_type)) +
-    geom_bar(position = 'fill') +
+    geom_bar(position = position_fill(reverse = TRUE)) +
     scale_fill_manual(values = colours_four) +
     facet_grid(cols = vars(year_dx)) +
-    theme(legend.position = 'none') +
+    theme(legend.position = "none",
+          axis.text.x = element_text(size = 6),
+          panel.spacing = unit(1, "lines"),
+          legend.spacing.x = unit(0.05, "cm"),
+          legend.margin = margin(0, 0, 0, 0),
+          legend.box.margin = margin(0, 0, 0, 0),
+          legend.text = element_text(margin = margin(r = 5, unit = "mm"))) +
     scale_y_discrete(expand = c(0, 0)) +
     labs(y = '',
-         x = '')
+         x = ''))
 
-fig_s4b <- esismal |> 
-  mutate(city = factor(city, levels = c('Health centre',
-                                        'Hospital',
-                                        'Clinic',
-                                        'Other')),
-         city2 = reorder(esismal$city,
-                         esismal$hu_type,
-                         FUN = function(x) mean(as.numeric(x)))) |> 
+(fig_s4b <- esismal |> 
+    mutate(hu_type = factor(hu_type, levels = c('Hospital',
+                                                'Health centre',
+                                                'Clinic',
+                                                'Other')),
+           city2 = reorder(esismal$city,
+                           esismal$hu_type,
+                           FUN = function(x) mean(as.numeric(x)))) |>
   filter(province == 'West Papua') |> 
   ggplot(aes(y = city2,
              fill = hu_type)) +
-  geom_bar(position = 'fill') +
+  geom_bar(position = position_fill(reverse = TRUE)) +
   scale_fill_manual(values = colours_four) +
   facet_grid(cols = vars(year_dx)) +
   theme(legend.position = "bottom",
@@ -1628,10 +1599,7 @@ fig_s4b <- esismal |>
         legend.text = element_text(margin = margin(r = 5, unit = "mm"))) +
   scale_y_discrete(expand = c(0, 0)) +
   labs(y = '',
-       x = '\nProportion of health units')
-
-fig_s4a
-fig_s4b
+       x = '\nCumulative proportion of health units'))
 
 fig_s4 <- plot_grid(fig_s4a,
                     fig_s4b,
@@ -1651,20 +1619,130 @@ ggsave(filename = "fig_s4.png",
        height = 9,
        dpi = 600)
 
+# Occupation
+# ...
 
+# Clinical severity
 
+fig_s5 <- esismal |> 
+  mutate(hu_type = factor(hu_type, levels = c('Hospital',
+                                              'Health centre',
+                                              'Clinic',
+                                              'Other'))) |> 
+  ggplot(aes(x = hu_type, fill = severe)) +
+    geom_bar(position = 'fill') +
+    scale_fill_manual(values = colours) +
+    theme(legend.position = "bottom",
+          legend.justification = "right",
+          legend.direction = "horizontal",
+          axis.text.x = element_text(size = 6),
+          panel.spacing = unit(1, "lines"),
+          legend.spacing.x = unit(0.05, "cm"),
+          legend.margin = margin(0, 0, 0, 0),
+          legend.box.margin = margin(0, 0, 0, 0),
+          legend.text = element_text(margin = margin(r = 5, unit = "mm"))) +
+    facet_grid(cols = vars(year_dx),
+               rows = vars(province)) +
+    labs(x = '',
+         y = 'Cumulative proportion of clinical severity\n')
 
+fig_s5
 
+ggsave(filename = "fig_s5.png",
+       path = here::here("0-graph"),
+       width = 7,
+       height = 7.5,
+       dpi = 600)
 
+esismal |>
+  na.omit(age_cat) |> 
+  ggplot(aes(y = age_cat,
+             fill = severe)) +
+  geom_bar(position = 'fill') +
+  scale_fill_manual(values = colours_four) +
+  facet_grid(cols = vars(year_dx),
+             rows = vars(province)) +
+  theme(legend.position = "bottom",
+        legend.justification = "right",
+        legend.direction = "horizontal",
+        axis.text.x = element_text(size = 6),
+        panel.spacing = unit(1, "lines"),
+        legend.spacing.x = unit(0.05, "cm"),
+        legend.margin = margin(0, 0, 0, 0),
+        legend.box.margin = margin(0, 0, 0, 0),
+        legend.text = element_text(margin = margin(r = 5, unit = "mm"))) +
+  scale_y_discrete(expand = c(0, 0)) +
+  labs(y = '',
+       x = '\nCumulative proportion of clinical severity')
 
+esismal |>
+  na.omit(sex) |>
+  ggplot(aes(y = age_cat,
+             fill = severe)) +
+  geom_bar(position = 'fill') +
+  scale_fill_manual(values = colours_four) +
+  facet_grid(cols = vars(sex),
+             rows = vars(province)) +
+  theme(legend.position = "bottom",
+        legend.justification = "right",
+        legend.direction = "horizontal",
+        axis.text.x = element_text(size = 6),
+        panel.spacing = unit(1, "lines"),
+        legend.spacing.x = unit(0.05, "cm"),
+        legend.margin = margin(0, 0, 0, 0),
+        legend.box.margin = margin(0, 0, 0, 0),
+        legend.text = element_text(margin = margin(r = 5, unit = "mm"))) +
+  scale_y_discrete(expand = c(0, 0)) +
+  labs(y = '',
+       x = '')
 
+esismal |> 
+  mutate(severe = factor(severe, levels = c('Severe malaria',
+                                             'Uncomplicated malaria')),
+         city2 = reorder(esismal$city,
+                         esismal$severe,
+                         FUN = function(x) mean(as.numeric(x)))) |>
+  filter(province == 'Papua') |> 
+  ggplot(aes(y = city2,
+             fill = severe)) +
+  geom_bar(position = 'fill') +
+  scale_fill_manual(values = colours_four) +
+  facet_grid(cols = vars(year_dx)) +
+  theme(legend.position = "bottom",
+        legend.justification = "right",
+        legend.direction = "horizontal",
+        axis.text.x = element_text(size = 6),
+        panel.spacing = unit(1, "lines"),
+        legend.spacing.x = unit(0.05, "cm"),
+        legend.margin = margin(0, 0, 0, 0),
+        legend.box.margin = margin(0, 0, 0, 0),
+        legend.text = element_text(margin = margin(r = 5, unit = "mm"))) +
+  scale_y_discrete(expand = c(0, 0)) +
+  labs(y = '',
+       x = '\nCumulative proportion of clinical severity')
 
-
-
-
-
-
-
+esismal |> 
+  mutate(city2 = reorder(esismal$city,
+                         esismal$occupation,
+                         FUN = function(x) mean(as.numeric(x)))) |>
+  filter(province == 'Papua') |> 
+  ggplot(aes(y = city2,
+             fill = occupation)) +
+  geom_bar(position = 'fill') +
+  # scale_fill_manual(values = colours_four) +
+  facet_grid(cols = vars(year_dx)) +
+  theme(legend.position = "bottom",
+        legend.justification = "right",
+        legend.direction = "horizontal",
+        axis.text.x = element_text(size = 6),
+        panel.spacing = unit(1, "lines"),
+        legend.spacing.x = unit(0.05, "cm"),
+        legend.margin = margin(0, 0, 0, 0),
+        legend.box.margin = margin(0, 0, 0, 0),
+        legend.text = element_text(margin = margin(r = 5, unit = "mm"))) +
+  scale_y_discrete(expand = c(0, 0)) +
+  labs(y = '',
+       x = '\nCumulative proportion of ...')
 
 
 
@@ -1673,4 +1751,15 @@ ggsave(filename = "fig_s4.png",
 # Appendix ----------------------------------------------------------------
 
 sessioninfo::platform_info()
+
+# pekerjaan, lab, kematian
+
+# Number of unique health units per district
+# esismal |> 
+#   group_by(year_dx, city) |> 
+#   summarise(n_hu = unique(health_unit)) |> 
+#   summarise(n = n()) |> 
+#   ungroup() |> 
+#   group_by(year_dx) |> 
+#   arrange(desc(n), .by_group = TRUE)
 

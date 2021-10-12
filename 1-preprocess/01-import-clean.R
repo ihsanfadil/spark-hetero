@@ -175,16 +175,87 @@ esismal <- raw_esismal %>%
       'Clinic',
       
       TRUE ~ 'Other'
-    ) |> factor()
+    ) |> factor(),
+    severe = case_when(derajat == 1 ~ 'Uncomplicated malaria',
+                       derajat == 2 ~ 'Severe malaria',
+                       TRUE ~ NA_character_) |> factor(),
   ) %>%
+  mutate(age_cat = case_when(age < 5 ~ "0-4",
+                             age < 10 ~ "5-9",
+                             age < 15 ~ "10-14",
+                             age < 20 ~ "15-19",
+                             age < 25 ~ "20-24",
+                             age < 30 ~ "25-29",
+                             age < 35 ~ "30-34",
+                             age < 40 ~ "35-39",
+                             age < 45 ~ "40-44",
+                             age < 50 ~ "45-49",
+                             age < 55 ~ "50-54",
+                             age < 60 ~ "55-59",
+                             age < 65 ~ "60-64",
+                             age < 70 ~ "65-69",
+                             age < 75 ~ "70-74",
+                             age >= 75 ~ "75+",
+                             TRUE ~ NA_character_) %>% as.factor(),
+         age_cat = ordered(age_cat, levels = c("0-4",
+                                               "5-9",
+                                               "10-14",
+                                               "15-19",
+                                               "20-24",
+                                               "25-29",
+                                               "30-34",
+                                               "35-39",
+                                               "40-44",
+                                               "45-49",
+                                               "50-54",
+                                               "55-59",
+                                               "60-64",
+                                               "65-69",
+                                               "70-74",
+                                               "75+")),
+         adm_stat = case_when(
+           str_detect(p_rawat, regex('rj', ignore_case = TRUE)) ~ 'Outpatient',
+           str_detect(p_rawat, regex('ri', ignore_case = TRUE)) ~ 'Inpatient',
+           TRUE ~ NA_character_
+         ) |> factor(),
+         lab = case_when(lab == 'Mikroskop' ~ 'Microscopy',
+                         lab == 'PCR' ~ 'PCR',
+                         lab == 'RDT' ~ 'RDT',
+                         TRUE ~ NA_character_) |> factor(),
+         death = case_when(
+           str_detect(kematian, regex('ya', ignore_case = TRUE)) ~ TRUE,
+           str_detect(kematian, regex('tidak', ignore_case = TRUE)) ~ FALSE,
+           TRUE ~ NA
+         ),
+         occupation = case_when(pekerjaan == "Berkebun" ~ "Farmer",
+                                pekerjaan == "BERkebun" ~ "Farmer",
+                                pekerjaan == "Buruh" ~ "Other",
+                                pekerjaan == "Buruh Tambang" ~ "Mining worker",
+                                pekerjaan == "Guru" ~ "Other",
+                                pekerjaan == "Ibu Rumah Tangga" ~ "Other",
+                                pekerjaan == "Jaga Kapal" ~ "Other",
+                                pekerjaan == "Nelayan" ~ "Fisherman",
+                                pekerjaan == "Pedagang" ~ "Other",
+                                pekerjaan == "Pegawai" ~ "Other",
+                                pekerjaan == "Pelajar" ~ "Other",
+                                pekerjaan == "Perambah Hutan" ~
+                                  "Forest worker",
+                                pekerjaan == "Petambak" ~ "Other",
+                                pekerjaan == "Petani" ~ "Farmer",
+                                pekerjaan == "PNS" ~ "Other",
+                                pekerjaan == "POLRI" ~ "Police/Army",
+                                pekerjaan == "Tak Bekerja" ~ "Other",
+                                pekerjaan == "TNI" ~ "Police/Army",
+                                pekerjaan == "Wiraswasta" ~ "Other",
+                                TRUE ~ NA_character_) |> factor()) |> 
   
   # Select only those variables required
   select(id, # Unique identifier
          date_dx, week_dx, month_dx, year_dx, # Date of visit
          sp, # Parasite diagnosis
-         age, sex, # Age and sex
+         age, age_cat, sex, # Age and sex
          province, city, health_unit,
-         hu_type) %>%
+         hu_type, severe, adm_stat, lab, death, occupation) %>%
   
   # Filter only those in Papua and West Papua
   filter(province == "Papua" | province == "Papua Barat") %>% 
@@ -245,8 +316,9 @@ esismal <- esismal %>%
          province, city, n,
          date_dx, week_dx, month_dx, year_dx,
          sp,
-         age, sex,
-         health_unit) %>% 
+         age, age_cat, sex,
+         health_unit,
+         hu_type, severe, adm_stat, lab, death, occupation) %>% 
   ungroup()
 
 # Label the selected variables
@@ -262,7 +334,14 @@ var_label(esismal) <- list(
   sp = 'Malaria species',
   age = 'Age (years)',
   sex = 'Biological sex',
-  health_unit = 'Health unit'
+  health_unit = 'Health unit',
+  hu_type = 'Type of health unit',
+  severe = 'Severe malaria',
+  age_cat = 'Age interval (years)',
+  adm_stat = 'Admission status',
+  lab = 'Diagnostic means',
+  death = 'Death',
+  occupation = 'Occupation'
 )
 
 # Time series data
