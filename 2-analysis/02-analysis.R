@@ -217,6 +217,9 @@ sex_species <- monthly_incidence %>%
 
 sex_species
   
+
+## STRANGE 0-4 API
+
 api_age <- esismal %>% 
   filter(year_dx == 2020) %>% 
   group_by(province, age_cat, sex, sp) %>% 
@@ -385,6 +388,19 @@ age_intervals <- api_age %>%
        y = "Annual parasite incidence per 1000\n")
 
 age_intervals
+
+fig_3 <- plot_grid(sex_species, age_intervals,
+                   ncol = 1, align = "v",
+                   labels = c('A', 'B'),
+                   label_size = 10,
+                   rel_heights = c(1, 1),
+                   rel_widths = c(1, 1))
+fig_3
+
+ggsave(filename = "char_distributions.png",
+       path = here::here("0-graph"),
+       height = 9, width = 7,
+       dpi = 600)
 
 # District-specific incidence by sex,  species, and age -------------------
 
@@ -950,7 +966,44 @@ api_hu_sp_raw <- esismal %>%
   mutate(pop_hu = pop_city / n_hu,
          api_hu = (case_hu / pop_hu) * 1000)
 
-api_hu_sp <- api_hu_sp_raw %>% 
+api_hu_sp_exp <- api_hu_sp_raw |> 
+  select(-c(pop, api)) |> 
+  # Add rows with zero cases
+  group_by(province, city, year_dx, sp) |> 
+  nest() |> 
+  mutate(
+    data_exp = map(
+      .x = data,
+      .f = function(data = .x) {
+        # Extract n health units
+        n_hu_est <- data$n_hu[1]
+        n_hu_esismal <- nrow(data)
+        
+        # Extract the difference then add rows if positive
+        if (n_hu_est > n_hu_esismal) {
+          n_hu_diff <- n_hu_est - n_hu_esismal
+          
+          add_df <- tibble(.rows = n_hu_diff,
+                           health_unit = NA,
+                           case = 0,
+                           pop_city = data$pop_city[1],
+                           n_hu = data$n_hu[1])
+          
+          data <- data |> add_row(add_df)
+        } else {
+          data <- data
+        }
+      }
+    )
+  ) |> 
+  select(-data) |> 
+  unnest(data_exp) |> 
+  ungroup() |> 
+  mutate(pop_hu = pop_city / n_hu,
+         api_hu = (case / pop_hu) * 1000) |> 
+  rename(case_hu = case)
+
+api_hu_sp <- api_hu_sp_exp %>% 
   group_by(year_dx, province, sp) %>% 
   arrange(desc(api_hu), .by_group = TRUE) %>% 
   mutate(case_cumsum = cumsum(case_hu),
@@ -1330,7 +1383,7 @@ gini_index <- function(data) { # Data must contain `p_i` and `c_i`
 
 # District level
 # set.seed(13)
-n_boot <- 10^1
+n_boot <- 10^2
 
 ci_pi <- function(data) {
   df <- data %>% 
@@ -1906,7 +1959,8 @@ temp <- esismal |>
   ungroup() |> 
   mutate(pop = pop_city / n_hu, # May be improved
          api = case / pop) |> 
-  mutate() |> # Add rows with zero cases
+  
+  # Add rows with zero cases
   group_by(province, city, year_dx) |> 
   nest() |> 
   mutate(
