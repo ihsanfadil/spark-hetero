@@ -231,23 +231,24 @@ esismal <- raw_esismal %>%
                                 pekerjaan == "BERkebun" ~ "Farmer",
                                 pekerjaan == "Buruh" ~ "Other",
                                 pekerjaan == "Buruh Tambang" ~ "Mining worker",
-                                pekerjaan == "Guru" ~ "Other",
-                                pekerjaan == "Ibu Rumah Tangga" ~ "Other",
-                                pekerjaan == "Jaga Kapal" ~ "Other",
+                                pekerjaan == "Guru" ~ "Teacher",
+                                pekerjaan == "Ibu Rumah Tangga" ~ "Housewife",
+                                pekerjaan == "Jaga Kapal" ~ "Fisherman",
                                 pekerjaan == "Nelayan" ~ "Fisherman",
-                                pekerjaan == "Pedagang" ~ "Other",
-                                pekerjaan == "Pegawai" ~ "Other",
-                                pekerjaan == "Pelajar" ~ "Other",
+                                pekerjaan == "Pedagang" ~ "Merchant",
+                                pekerjaan == "Pegawai" ~ "Employee",
+                                pekerjaan == "Pelajar" ~ "Student",
                                 pekerjaan == "Perambah Hutan" ~
                                   "Forest worker",
-                                pekerjaan == "Petambak" ~ "Other",
+                                pekerjaan == "Petambak" ~ "Pond worker",
                                 pekerjaan == "Petani" ~ "Farmer",
-                                pekerjaan == "PNS" ~ "Other",
+                                pekerjaan == "PNS" ~ "Civil servant",
                                 pekerjaan == "POLRI" ~ "Police/Army",
-                                pekerjaan == "Tak Bekerja" ~ "Other",
+                                pekerjaan == "Tak Bekerja" ~ "Unemployed",
+                                pekerjaan == "Belum Bekerja" ~ "Unemployed",
                                 pekerjaan == "TNI" ~ "Police/Army",
                                 pekerjaan == "Wiraswasta" ~ "Other",
-                                TRUE ~ NA_character_) |> factor()) |> 
+                                TRUE ~ NA_character_) |> factor()) |>
   
   # Select only those variables required
   select(id, # Unique identifier
@@ -503,6 +504,7 @@ time_series_month %>% write_rds(file = here("0-data", "time-series-month.rds"))
 
 ## Mixed incorporated into mono (aggregate data derived from individual),
 ## minor species excluded
+
 esismal %>% 
   filter(sp == 'P. falciparum' |
          sp == 'P. vivax'|

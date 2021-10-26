@@ -165,7 +165,7 @@ fig_1 <- plot_grid(by_month, prop_vivax_by_province,
                    rel_heights = c(0.75, 1),
                    rel_widths = c(2, 1))
 fig_1
-ggsave(filename = "figure_1.png",
+ggsave(filename = "decade_trend.png",
        path = here::here("0-graph"),
        height = 7,
        dpi = 600)
@@ -556,7 +556,7 @@ sex_species_district <- monthly_incidence_district_20 %>%
 
 sex_species_district
 
-ggsave(filename = "figure_s1.png",
+ggsave(filename = "sex_sp_district.png",
        path = here::here("0-graph"),
        height = 9,
        dpi = 600)
@@ -763,12 +763,12 @@ age_intervals_district <- api_age_district %>%
 
 age_intervals_district
 
-ggsave(filename = "figure_s2.png",
+ggsave(filename = "age_int_district.png",
        path = here::here("0-graph"),
        height = 8,
        dpi = 600)
 
-# Province-specific Gini index --------------------------------------------
+# Level-specific Gini index --------------------------------------------
 
 ## Across districts
 api_city_sp_raw <- esismal %>% 
@@ -885,6 +885,35 @@ hu_wpapua <- here::here("0-data", "health_units_west_papua.xlsx") %>%
 
 hu <- bind_rows(hu_papua, hu_wpapua)
 
+# Estimate numbers of health units
+nhu_esismal20 <- esismal |> 
+  filter(year_dx == 2020) |> 
+  group_by(province, city, health_unit) |> 
+  count() |> 
+  select(-n) |> 
+  group_by(province, city) |> 
+  count() |> 
+  rename(n_hu_obs20 = n)
+
+nhu_esismal19 <- esismal |> 
+  filter(year_dx == 2019) |> 
+  group_by(province, city, health_unit) |> 
+  count() |> 
+  select(-n) |> 
+  group_by(province, city) |> 
+  count() |> 
+  rename(n_hu_obs19 = n)
+
+nhu_est <- nhu_esismal20 |> 
+  full_join(y = hu, by = c('province', 'city')) |> 
+  full_join(y = nhu_esismal19, by = c('province', 'city')) |> 
+  rename(n_hu_web = n_hu) |> 
+  rowwise() |> 
+  mutate(nhu_est = max(n_hu_obs20, n_hu_obs19, n_hu_web, na.rm = TRUE)) |>
+  ungroup() |> 
+  select(province, city, nhu_est) |> 
+  rename(n_hu = nhu_est)
+
 api_hu_sp_raw <- esismal %>% 
   filter(sp == "P. falciparum" |
            sp == "P. vivax" |
@@ -916,7 +945,7 @@ api_hu_sp_raw <- esismal %>%
          case_hu = if_else(is.na(case_hu), 0, as.double(case_hu))) %>% 
   group_by(province, city) %>% 
   nest() %>% 
-  left_join(x = ., y = hu, by = c('city', 'province')) %>%
+  left_join(x = ., y = nhu_est, by = c('city', 'province')) %>%
   unnest(data) %>%
   mutate(pop_hu = pop_city / n_hu,
          api_hu = (case_hu / pop_hu) * 1000)
@@ -970,7 +999,7 @@ fig_5 <- plot_grid(lorenz_district, lorenz_health_unit,
 
 fig_5
 
-ggsave(filename = "figure_5.png",
+ggsave(filename = "lorenz_curves.png",
        path = here::here("0-graph"),
        height = 8,
        dpi = 600)
@@ -997,14 +1026,16 @@ total_api <- esismal %>%
 male_proportion <- full_join(male_proportion, total_api,
                              by = c('year_dx', 'province', 'city'))
 
+params_span <- 1
+
 male_proportion_plot <- male_proportion %>% 
   ggplot(aes(x = api,
              y = male_prop)) +
   geom_smooth(aes(linetype = factor(year_dx)),
               formula = "y ~ x",
               method = "loess",
-              span = 1,
-              se = TRUE,
+              span = params_span,
+              se = 1,
               size = 1.3,
               fill = "gray80",
               colour = colours_three[1]) +
@@ -1058,8 +1089,8 @@ adult_proportion_plot <- adult_proportion %>%
   geom_smooth(aes(linetype = factor(year_dx)),
               formula = "y ~ x",
               method = "loess",
-              span = 1,
-              se = TRUE,
+              span = params_span,
+              se = 1,
               size = 1.3,
               fill = "gray80",
               colour = colours_three[1]) +
@@ -1114,8 +1145,8 @@ vivax_proportion_plot <- vivax_proportion %>%
   geom_smooth(aes(linetype = factor(year_dx)),
               formula = "y ~ x",
               method = "loess",
-              span = 1,
-              se = TRUE,
+              span = params_span,
+              se = 1,
               size = 1.3,
               fill = "gray80",
               colour = colours_three[1]) +
@@ -1161,7 +1192,7 @@ fig_4 <- plot_grid(vivax_proportion_plot,
 
 fig_4
 
-ggsave(filename = "figure_4.png",
+ggsave(filename = "proportions.png",
        path = here::here("0-graph"),
        width = 12,
        dpi = 600)
@@ -1299,7 +1330,7 @@ gini_index <- function(data) { # Data must contain `p_i` and `c_i`
 
 # District level
 # set.seed(13)
-n_boot <- 10^2
+n_boot <- 10^1
 
 ci_pi <- function(data) {
   df <- data %>% 
@@ -1446,7 +1477,7 @@ ci_districts <- tibble(
     labs(y = 'Density\n',
          x = '\nGini index'))
 
-ggsave(filename = "figure_s2.png",
+ggsave(filename = "boot_district.png",
        path = here::here("0-graph"),
        width = 8,
        height = 8,
@@ -1532,7 +1563,7 @@ ci_health_units <- tibble(
     labs(y = 'Density\n',
          x = '\nGini index'))
 
-ggsave(filename = "figure_s3.png",
+ggsave(filename = "boot_hu.png",
        path = here::here("0-graph"),
        width = 8,
        height = 8,
@@ -1548,8 +1579,58 @@ ggsave(filename = "figure_s3.png",
 
 colours_four <- c('#077b8a', '#a2d5c6', '#5c3c92', '#d72631')
 
+# District-specific API
+esismal_api <- esismal |> 
+  group_by(year_dx, province, city) |> 
+  summarise(n = unique(n),
+            case = n()) |> 
+  mutate(api = (case / n) * 1000) |> 
+  ungroup() |> 
+  mutate(api_cat = case_when(api < 1 ~ '[0, 1)',
+                             api >= 1 & api < 5 ~ '[1, 5)',
+                             api >= 5 ~ '[5, ∞)',
+                             TRUE ~ NA_character_) |> factor())
+esismal_api20 <- filter(esismal_api, year_dx == 2020)
+esismal_api19 <- filter(esismal_api, year_dx == 2019)
+
+api_plot_overall <- esismal_api |>
+  ggplot(aes(x = api,
+             y = reorder(city, api),
+             colour = factor(year_dx),
+             shape = province)) +
+  # geom_bar(stat = 'identity', position = 'dodge2') +
+  geom_point(size = 3, alpha = 0.7) +
+  scale_x_continuous(limits = c(0.1, 1000),
+                     trans = "log10",
+                     expand = c(0, 0),
+                     labels = number_format(accuracy = 1, big.mark = ",")) +
+  scale_y_discrete(expand = c(0.01, 0)) +
+  scale_colour_manual(values = colours) +
+  theme(
+    # axis.text.y = element_blank(),
+    legend.position = c(0.95, 0.1),
+    legend.justification = "right",
+    legend.direction = "vertical",
+    axis.text.x = element_text(size = 6),
+    panel.spacing = unit(1, "lines"),
+    legend.spacing.x = unit(0.05, "cm"),
+    legend.margin = margin(0.5, 0.5, 0.5, 0.5),
+    legend.box.margin = margin(0, 0, 0, 0),
+    legend.text = element_text(margin = margin(r = 5, unit = "mm")),
+    plot.margin = unit(c(1, 1, 1, 0), "cm"),
+    text = element_text(size = 9)) +
+  labs(y = '',
+       x = '\nAnnual parasite incidence per 1000')
+
+api_plot_overall
+ggsave(filename = "api_overall.png",
+       path = here::here("0-graph"),
+       width = 7,
+       height = 9,
+       dpi = 600)
+
 # Health unit types by district
-(fig_s4a <- esismal |> 
+(fig_ht_papua <- esismal |> 
   mutate(hu_type = factor(hu_type, levels = c('Hospital',
                                               'Health centre',
                                               'Clinic',
@@ -1574,7 +1655,7 @@ colours_four <- c('#077b8a', '#a2d5c6', '#5c3c92', '#d72631')
     labs(y = '',
          x = ''))
 
-(fig_s4b <- esismal |> 
+(fig_ht_wpapua <- esismal |> 
     mutate(hu_type = factor(hu_type, levels = c('Hospital',
                                                 'Health centre',
                                                 'Clinic',
@@ -1599,10 +1680,10 @@ colours_four <- c('#077b8a', '#a2d5c6', '#5c3c92', '#d72631')
         legend.text = element_text(margin = margin(r = 5, unit = "mm"))) +
   scale_y_discrete(expand = c(0, 0)) +
   labs(y = '',
-       x = '\nCumulative proportion of health units'))
+       x = '\nProportion of health unit type'))
 
-fig_s4 <- plot_grid(fig_s4a,
-                    fig_s4b,
+fig_ht <- plot_grid(fig_ht_papua,
+                    fig_ht_wpapua,
                     ncol = 1, align = "v",
                     labels = c('A', 'B'),
                     label_size = 10,
@@ -1611,20 +1692,17 @@ fig_s4 <- plot_grid(fig_s4a,
                     label_y = 1,
                     label_x = 0)
 
-fig_s4
+fig_ht
 
-ggsave(filename = "fig_s4.png",
+ggsave(filename = "hu_types.png",
        path = here::here("0-graph"),
        width = 7,
        height = 9,
        dpi = 600)
 
-# Occupation
-# ...
-
 # Clinical severity
 
-fig_s5 <- esismal |> 
+fig_severity_overall <- esismal |> 
   mutate(hu_type = factor(hu_type, levels = c('Hospital',
                                               'Health centre',
                                               'Clinic',
@@ -1644,94 +1722,145 @@ fig_s5 <- esismal |>
     facet_grid(cols = vars(year_dx),
                rows = vars(province)) +
     labs(x = '',
-         y = 'Cumulative proportion of clinical severity\n')
+         y = 'Proportion of clinical severity\n')
 
-fig_s5
+fig_severity_overall
 
-ggsave(filename = "fig_s5.png",
+ggsave(filename = "severity_overall.png",
        path = here::here("0-graph"),
        width = 7,
        height = 7.5,
        dpi = 600)
+  
+# Occupation
 
-esismal |>
-  na.omit(age_cat) |> 
-  ggplot(aes(y = age_cat,
-             fill = severe)) +
-  geom_bar(position = 'fill') +
-  scale_fill_manual(values = colours_four) +
-  facet_grid(cols = vars(year_dx),
-             rows = vars(province)) +
-  theme(legend.position = "bottom",
-        legend.justification = "right",
-        legend.direction = "horizontal",
-        axis.text.x = element_text(size = 6),
-        panel.spacing = unit(1, "lines"),
-        legend.spacing.x = unit(0.05, "cm"),
-        legend.margin = margin(0, 0, 0, 0),
-        legend.box.margin = margin(0, 0, 0, 0),
-        legend.text = element_text(margin = margin(r = 5, unit = "mm"))) +
-  scale_y_discrete(expand = c(0, 0)) +
-  labs(y = '',
-       x = '\nCumulative proportion of clinical severity')
-
-esismal |>
-  na.omit(sex) |>
-  ggplot(aes(y = age_cat,
-             fill = severe)) +
-  geom_bar(position = 'fill') +
-  scale_fill_manual(values = colours_four) +
-  facet_grid(cols = vars(sex),
-             rows = vars(province)) +
-  theme(legend.position = "bottom",
-        legend.justification = "right",
-        legend.direction = "horizontal",
-        axis.text.x = element_text(size = 6),
-        panel.spacing = unit(1, "lines"),
-        legend.spacing.x = unit(0.05, "cm"),
-        legend.margin = margin(0, 0, 0, 0),
-        legend.box.margin = margin(0, 0, 0, 0),
-        legend.text = element_text(margin = margin(r = 5, unit = "mm"))) +
-  scale_y_discrete(expand = c(0, 0)) +
-  labs(y = '',
-       x = '')
-
-esismal |> 
-  mutate(severe = factor(severe, levels = c('Severe malaria',
-                                             'Uncomplicated malaria')),
-         city2 = reorder(esismal$city,
-                         esismal$severe,
-                         FUN = function(x) mean(as.numeric(x)))) |>
+api_plot_papua20 <- esismal_api20 |> 
   filter(province == 'Papua') |> 
-  ggplot(aes(y = city2,
-             fill = severe)) +
-  geom_bar(position = 'fill') +
-  scale_fill_manual(values = colours_four) +
-  facet_grid(cols = vars(year_dx)) +
-  theme(legend.position = "bottom",
-        legend.justification = "right",
-        legend.direction = "horizontal",
-        axis.text.x = element_text(size = 6),
-        panel.spacing = unit(1, "lines"),
-        legend.spacing.x = unit(0.05, "cm"),
-        legend.margin = margin(0, 0, 0, 0),
-        legend.box.margin = margin(0, 0, 0, 0),
-        legend.text = element_text(margin = margin(r = 5, unit = "mm"))) +
-  scale_y_discrete(expand = c(0, 0)) +
-  labs(y = '',
-       x = '\nCumulative proportion of clinical severity')
+  ggplot(aes(x = api,
+             y = reorder(city, api))) +
+    # geom_bar(stat = 'identity') +
+    geom_point(shape = 18, size = 2.5) +
+    scale_x_continuous(limits = c(0.1, 1000),
+                       trans = "log10",
+                       expand = c(0, 0),
+                       labels = number_format(accuracy = 1, big.mark = ",")) +
+    scale_y_discrete(expand = c(0.015, 0)) +
+    theme(
+          axis.text.y = element_blank(),
+          legend.position = "none",
+          legend.justification = "right",
+          legend.direction = "horizontal",
+          axis.text.x = element_text(size = 6),
+          panel.spacing = unit(1, "lines"),
+          legend.spacing.x = unit(0.05, "cm"),
+          legend.margin = margin(0, 0, 0, 0),
+          legend.box.margin = margin(0, 0, 0, 0),
+          legend.text = element_text(margin = margin(r = 5, unit = "mm")),
+          plot.margin = unit(c(1, 1, 1, 0), "cm"),
+          text = element_text(size = 7.5)) +
+    labs(y = '',
+         x = '\nAnnual parasite incidence per 1000')
 
-esismal |> 
-  mutate(city2 = reorder(esismal$city,
-                         esismal$occupation,
-                         FUN = function(x) mean(as.numeric(x)))) |>
-  filter(province == 'Papua') |> 
-  ggplot(aes(y = city2,
+esismal_api_joined <- esismal |> 
+  group_by(year_dx, city) |> 
+  summarise(case = n(),
+            pop = unique(n),
+            api = (case / pop) * 1000)
+
+occupation_papua20 <- esismal |> 
+  group_by(year_dx, city) |> 
+  nest() |> 
+  full_join(y = esismal_api_joined, by = c('year_dx', 'city')) |> 
+  unnest(data) |> 
+  ungroup() |> 
+  filter(age >= 18) |> 
+  filter(province == 'Papua' & year_dx == 2020) |> 
+  mutate(city = fct_reorder(city, api)) |> 
+  ggplot(aes(y = city,
+             fill = occupation)) +
+    geom_bar(position = 'fill') +
+    scale_fill_brewer(type = "qual",
+                      palette = "Paired",
+                      na.value = 'Gray25') +
+    scale_x_continuous(expand = c(0, 0)) +
+    scale_y_discrete(expand = c(0.01, 0)) +
+    theme(legend.position = c(2.6, -0.15),
+          legend.justification = "right",
+          legend.direction = "horizontal",
+          axis.text.x = element_text(size = 6),
+          panel.spacing = unit(1, "lines"),
+          legend.spacing.x = unit(0.05, "cm"),
+          legend.margin = margin(0, 0, 0, 0),
+          legend.box.margin = margin(0, 0, 0, 0),
+          legend.text = element_text(margin = margin(r = 5, unit = "mm")),
+          plot.margin = unit(c(1, 0, 3, 1), "cm"),
+          text = element_text(size = 7.5)) +
+    labs(y = '',
+         x = '\nProportion of occupation')
+
+fig_occupation_papua <- plot_grid(occupation_papua20,
+                                  api_plot_papua20,
+                                  align = 'h',
+                                  ncol = 2,
+                                  labels = c('', ''),
+                                  label_size = 10,
+                                  rel_heights = c(1, 1),
+                                  rel_widths = c(1, 1),
+                                  label_y = 1,
+                                  label_x = 0)
+fig_occupation_papua
+
+ggsave(filename = "occupation_papua.png",
+       path = here::here("0-graph"),
+       width = 8,
+       height = 8,
+       dpi = 600)
+
+api_plot_wpapua20 <- esismal_api20 |> 
+  filter(province == 'West Papua') |> 
+  ggplot(aes(x = api,
+             y = reorder(city, api))) +
+  # geom_bar(stat = 'identity') +
+  geom_point(shape = 18, size = 2.5) +
+  scale_x_continuous(limits = c(0.1, 1000),
+                     trans = "log10",
+                     expand = c(0, 0),
+                     labels = number_format(accuracy = 1, big.mark = ",")) +
+  scale_y_discrete(expand = c(0.035, 0)) +
+  theme(
+    axis.text.y = element_blank(),
+    legend.position = "none",
+    legend.justification = "right",
+    legend.direction = "horizontal",
+    axis.text.x = element_text(size = 6),
+    panel.spacing = unit(1, "lines"),
+    legend.spacing.x = unit(0.05, "cm"),
+    legend.margin = margin(0, 0, 0, 0),
+    legend.box.margin = margin(0, 0, 0, 0),
+    legend.text = element_text(margin = margin(r = 5, unit = "mm")),
+    plot.margin = unit(c(1, 1, 1, 0), "cm"),
+    text = element_text(size = 7.5)) +
+  labs(y = '',
+       x = '\nAnnual parasite incidence per 1000')
+
+occupation_wpapua20 <- esismal |> 
+  group_by(year_dx, city) |> 
+  nest() |> 
+  full_join(y = esismal_api_joined, by = c('year_dx', 'city')) |> 
+  unnest(data) |> 
+  ungroup() |> 
+  filter(age >= 18) |> 
+  filter(province == 'West Papua' & year_dx == 2020) |> 
+  mutate(city = fct_reorder(city, api)) |> 
+  ggplot(aes(y = city,
              fill = occupation)) +
   geom_bar(position = 'fill') +
-  # scale_fill_manual(values = colours_four) +
-  facet_grid(cols = vars(year_dx)) +
-  theme(legend.position = "bottom",
+  scale_fill_brewer(type = "qual",
+                    palette = "Paired",
+                    na.value = 'Gray25') +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_discrete(expand = c(0, 0)) +
+  theme(legend.position = c(2.55, -0.35),
         legend.justification = "right",
         legend.direction = "horizontal",
         axis.text.x = element_text(size = 6),
@@ -1739,27 +1868,203 @@ esismal |>
         legend.spacing.x = unit(0.05, "cm"),
         legend.margin = margin(0, 0, 0, 0),
         legend.box.margin = margin(0, 0, 0, 0),
-        legend.text = element_text(margin = margin(r = 5, unit = "mm"))) +
-  scale_y_discrete(expand = c(0, 0)) +
+        legend.text = element_text(margin = margin(r = 5, unit = "mm")),
+        plot.margin = unit(c(1, 0, 3, 1), "cm"),
+        text = element_text(size = 7.5)) +
   labs(y = '',
-       x = '\nCumulative proportion of ...')
+       x = '\nProportion of occupation')
 
+fig_occupation_wpapua <- plot_grid(occupation_wpapua20,
+                     api_plot_wpapua20,
+                     align = 'h',
+                     ncol = 2,
+                     labels = c('', ''),
+                     label_size = 10,
+                     rel_heights = c(1, 1),
+                     rel_widths = c(1, 1),
+                     label_y = 1,
+                     label_x = 0)
+fig_occupation_wpapua
 
+ggsave(filename = "occupation_wpapua.png",
+       path = here::here("0-graph"),
+       width = 8,
+       height = 4.5,
+       dpi = 600)
 
+# Gini-index, more resolution
+temp <- esismal |> 
+  group_by(year_dx, province, city, health_unit) |> 
+  summarise(case = n(),
+            pop_city = unique(n)) |>
+  ungroup() |> 
+  group_by(province, city) |> 
+  nest() |> 
+  left_join(y = nhu_est,
+            by = c('province', 'city')) |> 
+  unnest(data) |> 
+  ungroup() |> 
+  mutate(pop = pop_city / n_hu, # May be improved
+         api = case / pop) |> 
+  mutate() |> # Add rows with zero cases
+  group_by(province, city, year_dx) |> 
+  nest() |> 
+  mutate(
+    data_exp = map(
+      .x = data,
+      .f = function(data = .x) {
+        # Extract n health units
+        n_hu_est <- data$n_hu[1]
+        n_hu_esismal <- nrow(data)
+        
+        # Extract the difference then add rows if positive
+        if (n_hu_est > n_hu_esismal) {
+          n_hu_diff <- n_hu_est - n_hu_esismal
+          
+          add_df <- tibble(.rows = n_hu_diff,
+                           health_unit = NA,
+                           case = 0,
+                           pop_city = data$pop_city[1],
+                           n_hu = data$n_hu[1],
+                           pop = data$pop[1],
+                           api = 0)
+          
+          data <- data |> add_row(add_df)
+        } else {
+          data <- data
+        }
+      }
+    )
+  ) |> 
+  mutate(ci_pi = map(.x = data_exp, .f = ~ci_pi(.x)),
+         g = map_dbl(.x = ci_pi, .f = ~g(.x)) / 100) |> 
+  select(year_dx, province, city, g, data, data_exp, ci_pi) |> 
+  arrange(year_dx, province, city)
 
+api_nonsp <- esismal |> 
+  group_by(year_dx, province, city) |> 
+  summarise(case = n(),
+            pop = unique(n),
+            api = (case / pop) * 1000)
+
+gresol_api <- temp |> 
+  full_join(y = api_nonsp, by = c('year_dx', 'province', 'city')) |> 
+  select(year_dx, province, city, g, case, api) |> 
+  mutate(year_dx = factor(year_dx))
+
+model_gresol <- lm(log(api) ~ 1 + g + year_dx, data = gresol_api)
+broom::tidy(model_gresol)
+performance::check_model(model_gresol)
+
+fig_gresol <- gresol_api |> 
+  ggplot(aes(x = api, y = g)) +
+  geom_smooth(aes(linetype = year_dx),
+              method = 'lm',
+              se = TRUE,
+              size = 1.3,
+              fill = "gray80",
+              colour = colours_three[1]) +  
+  geom_point(aes(colour = year_dx, size = case), alpha = 0.4) +
+  scale_size_continuous(breaks = c(1000, 5000, 25000, 50000),
+                        labels = number_format(big.mark = ",")) +
+  scale_colour_manual(values = colours) +
+  scale_x_continuous(trans = "log10",
+                     limits = c(0.1, 1000),
+                     labels = number_format(accuracy = 1, big.mark = ","),
+                     expand = c(0, 0.05)) +
+  scale_y_continuous(limits = c(0, 1),
+                     breaks = seq(0, 1, by = 0.2),
+                     labels = percent_format(),
+                     expand = c(0, 0.01)) +
+  theme(panel.grid.minor.x = element_line(),
+        legend.position = c(0.75, 0.15),
+        legend.box = "horizontal",
+        legend.spacing.x = unit(0.01, 'mm'),     
+        legend.key.width = unit(0.8, "cm"),
+        plot.margin = unit(c(5, 5, 5, 5), "mm")) +
+  guides(size = guide_legend(override.aes = list(colour = "gray70"))) +
+  coord_fixed(ratio = 5) +
+  labs(x = "\nAnnual parasite incidence per 1000",
+       y = "Gini index\n")
+
+fig_gresol
+
+ggsave(filename = "gini_hires.png",
+       path = here::here("0-graph"),
+       width = 6,
+       height = 8,
+       dpi = 600)
 
 # Appendix ----------------------------------------------------------------
 
 sessioninfo::platform_info()
 
-# pekerjaan, lab, kematian
-
+# # pekerjaan, lab, kematian
+# 
 # Number of unique health units per district
+# api_nhu <- esismal |>
+#   filter(hu_type == 'Health centre') |>
+#   group_by(year_dx, city) |>
+#   summarise(n_hu = unique(health_unit)) |>
+#   summarise(n = n()) |>
+#   ungroup() |>
+#   group_by(year_dx) |>
+#   arrange(desc(n), .by_group = TRUE) |> 
+#   ungroup() |>
+#   full_join(esismal_api, by = c('year_dx', 'city')) |> 
+#   select(year_dx, city, n.x, province, api) |> 
+#   rename(nhu = n.x)
+# model <- lm(log(api) ~ 1 + nhu + year_dx, data = api_nhu)
+# broom::tidy(model)
+# broom::glance(model)
+# performance::check_model(model)
+# qplot(api_nhu$nhu, log(api_nhu$api)) +
+#   geom_smooth(method = 'lm', aes(colour = factor(api_nhu$year_dx)))
+
+# 
+# esismal |>
+#   na.omit(sex) |>
+#   ggplot(aes(y = age_cat,
+#              fill = severe)) +
+#   geom_bar(position = 'fill') +
+#   scale_fill_manual(values = colours_four) +
+#   facet_grid(cols = vars(sex),
+#              rows = vars(province)) +
+#   theme(legend.position = "bottom",
+#         legend.justification = "right",
+#         legend.direction = "horizontal",
+#         axis.text.x = element_text(size = 6),
+#         panel.spacing = unit(1, "lines"),
+#         legend.spacing.x = unit(0.05, "cm"),
+#         legend.margin = margin(0, 0, 0, 0),
+#         legend.box.margin = margin(0, 0, 0, 0),
+#         legend.text = element_text(margin = margin(r = 5, unit = "mm"))) +
+#   scale_y_discrete(expand = c(0, 0)) +
+#   labs(y = '',
+#        x = '')
+# 
 # esismal |> 
-#   group_by(year_dx, city) |> 
-#   summarise(n_hu = unique(health_unit)) |> 
-#   summarise(n = n()) |> 
-#   ungroup() |> 
-#   group_by(year_dx) |> 
-#   arrange(desc(n), .by_group = TRUE)
+#   mutate(severe = factor(severe, levels = c('Severe malaria',
+#                                             'Uncomplicated malaria')),
+#          city2 = reorder(esismal$city,
+#                          esismal$severe,
+#                          FUN = function(x) mean(as.numeric(x)))) |>
+#   filter(province == 'Papua') |> 
+#   ggplot(aes(y = city2,
+#              fill = severe)) +
+#   geom_bar(position = 'fill') +
+#   scale_fill_manual(values = colours_four) +
+#   facet_grid(cols = vars(year_dx)) +
+#   theme(legend.position = "bottom",
+#         legend.justification = "right",
+#         legend.direction = "horizontal",
+#         axis.text.x = element_text(size = 6),
+#         panel.spacing = unit(1, "lines"),
+#         legend.spacing.x = unit(0.05, "cm"),
+#         legend.margin = margin(0, 0, 0, 0),
+#         legend.box.margin = margin(0, 0, 0, 0),
+#         legend.text = element_text(margin = margin(r = 5, unit = "mm"))) +
+#   scale_y_discrete(expand = c(0, 0)) +
+#   labs(y = '',
+#        x = '\nCumulative proportion of clinical severity')
 
