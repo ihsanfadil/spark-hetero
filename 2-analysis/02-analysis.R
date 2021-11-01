@@ -3,7 +3,7 @@
 
 # Code author  : Ihsan Fadilah
 # Email        : ifadilah@eocru.org
-# Last updated : Late October 2021
+# Last updated : Early November 2021
 # Project      : SPARK project on malaria heterogeneity
 
 # This script provides code for visualising the Lorenz curve and estimating
