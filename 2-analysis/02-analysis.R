@@ -11,8 +11,6 @@
 
 # Setup -------------------------------------------------------------------
 
-remove(list = ls())
-
 # Packages
 library(tidyverse)   # Tidy and readable code
 library(lubridate)   # Handle time objects
@@ -219,13 +217,12 @@ sex_species <- monthly_incidence %>%
 
 sex_species
   
-
-## STRANGE 0-4 API
+# Age groups
 
 api_age <- esismal %>% 
   filter(year_dx == 2020) %>% 
+  # drop_na(sex, sp) |>
   group_by(province, age_cat, sex, sp) %>% 
-  na.omit(sex) %>% 
   summarise(case = n()) %>%
   filter(sp == "P. vivax" |
            sp == "P. falciparum" |
@@ -372,7 +369,7 @@ age_intervals <- api_age %>%
              y = api,
              fill = cat)) +
   geom_col() +
-  scale_x_discrete(expand = c(0.04, 0)) +
+  scale_x_discrete(expand = c(0.04, 0), na.translate = FALSE) +
   scale_y_continuous(expand = c(0, 0)) +
   facet_grid(rows = vars(province),
              scales = "free") +
@@ -411,11 +408,11 @@ monthly_incidence_keerom <- esismal %>%
   filter(year_dx == 2020) %>% 
   filter(city == "Keerom",
          sp == "P. falciparum" |
-           sp == "P. vivax" |
-           sp == "P. falciparum/vivax") %>% 
+         sp == "P. vivax" |
+         sp == "P. falciparum/vivax") %>% 
+  drop_na(sex) %>%
   group_by(month_dx, sex, sp) %>% 
-  summarise(n_case = n()) %>% 
-  na.omit(sex) %>%
+  summarise(n_case = n()) %>%
   pivot_wider(names_from = sp,
               values_from = n_case) %>% 
   mutate(`P. falciparum/vivax` = `P. falciparum/vivax` / 2,
@@ -460,9 +457,10 @@ monthly_incidence_nabire <- esismal %>%
          sp == "P. falciparum" |
            sp == "P. vivax" |
            sp == "P. falciparum/vivax") %>% 
+  drop_na(sex) %>%
   group_by(month_dx, sex, sp) %>% 
   summarise(n_case = n()) %>% 
-  na.omit(sex) %>%
+  # na.omit(sex) %>%
   pivot_wider(names_from = sp,
               values_from = n_case) %>% 
   mutate(`P. falciparum/vivax` = `P. falciparum/vivax` / 2,
@@ -507,9 +505,10 @@ monthly_incidence_jayawijaya <- esismal %>%
          sp == "P. falciparum" |
            sp == "P. vivax" |
            sp == "P. falciparum/vivax") %>% 
+  drop_na(sex) %>%
   group_by(month_dx, sex, sp) %>% 
   summarise(n_case = n()) %>% 
-  na.omit(sex) %>%
+  # na.omit(sex) %>%
   pivot_wider(names_from = sp,
               values_from = n_case) %>% 
   mutate(`P. falciparum/vivax` = `P. falciparum/vivax` / 2,
@@ -585,7 +584,7 @@ api_age_district <- esismal %>%
            city == "Nabire" |
            city == "Jayawijaya") %>% 
   group_by(city, age_cat, sex, sp) %>% 
-  na.omit(sex) %>% 
+  # na.omit(sex) %>% 
   summarise(case = n()) %>% 
   
   filter(sp == "P. vivax" |
@@ -757,6 +756,7 @@ age_intervals_district <- api_age_district %>%
          city = factor(city, levels = c("Keerom",
                                         "Nabire",
                                         "Jayawijaya"))) %>% 
+  drop_na(sex, age_cat) |> 
   ggplot(aes(x = age_cat,
              y = api,
              fill = cat)) +
@@ -766,7 +766,7 @@ age_intervals_district <- api_age_district %>%
                      labels = number_format(big.mark = ",")) +
   facet_grid(rows = vars(city),
              scales = "free") +
-  scale_fill_manual(values = expanded_colours) +
+  scale_fill_manual(values = expanded_colours, na.translate = FALSE) +
   theme(legend.position = "bottom",
         legend.justification = "right",
         legend.direction = "horizontal",
@@ -969,7 +969,7 @@ api_hu_sp_raw <- esismal %>%
          api_hu = (case_hu / pop_hu) * 1000)
 
 api_hu_sp_exp <- api_hu_sp_raw |> 
-  select(-c(pop, api)) |> 
+  select(-c(pop_hu, api_hu)) |> 
   # Add rows with zero cases
   group_by(province, city, year_dx, sp) |> 
   nest() |> 
@@ -987,7 +987,7 @@ api_hu_sp_exp <- api_hu_sp_raw |>
           
           add_df <- tibble(.rows = n_hu_diff,
                            health_unit = NA,
-                           case = 0,
+                           case_hu = 0,
                            pop_city = data$pop_city[1],
                            n_hu = data$n_hu[1])
           
@@ -1002,8 +1002,7 @@ api_hu_sp_exp <- api_hu_sp_raw |>
   unnest(data_exp) |> 
   ungroup() |> 
   mutate(pop_hu = pop_city / n_hu,
-         api_hu = (case / pop_hu) * 1000) |> 
-  rename(case_hu = case)
+         api_hu = (case_hu / pop_hu) * 1000)
 
 api_hu_sp <- api_hu_sp_exp %>% 
   group_by(year_dx, province, sp) %>% 
@@ -1385,7 +1384,7 @@ gini_index <- function(data) { # Data must contain `p_i` and `c_i`
 
 # District level
 # set.seed(13)
-n_boot <- 10^2
+n_boot <- 10^4
 
 ci_pi <- function(data) {
   df <- data %>% 
@@ -1555,11 +1554,10 @@ g_wpv19 <- c()
 g_wpf20 <- c()
 g_wpv20 <- c()
 
-api_hu_sp_raw <- api_hu_sp_raw %>% 
+api_hu_sp_raw <- api_hu_sp_exp %>% 
   rename(api = api_hu,
          case = case_hu,
          pop = pop_hu)
-api_hu_sp_raw <- ungroup(api_hu_sp_raw)
 
 for (i in 1:n_boot) {
   ci_gini_index(data = api_hu_sp_raw)
