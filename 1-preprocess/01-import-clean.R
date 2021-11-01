@@ -11,6 +11,8 @@
 
 # Setup -------------------------------------------------------------------
 
+remove(list = ls())
+
 library(tidyverse)  # Tidy and readable code
 library(lubridate)  # Handle time objects
 library(labelled)   # Label variables

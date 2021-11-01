@@ -11,6 +11,8 @@
 
 # Setup -------------------------------------------------------------------
 
+remove(list = ls())
+
 # Packages
 library(tidyverse)   # Tidy and readable code
 library(lubridate)   # Handle time objects
@@ -384,7 +386,7 @@ age_intervals <- api_age %>%
         legend.margin = margin(0, 0, 0, 0),
         legend.box.margin = margin(0, 0, 0, 0),
         legend.text = element_text(margin = margin(r = 9, unit = "mm"))) +
-  labs(x = "\nAge interval (years)",
+  labs(x = "\nAge group (years)",
        y = "Annual parasite incidence per 1000\n")
 
 age_intervals
@@ -774,7 +776,7 @@ age_intervals_district <- api_age_district %>%
         legend.margin = margin(0, 0, 0, 0),
         legend.box.margin = margin(0, 0, 0, 0),
         legend.text = element_text(margin = margin(r = 5, unit = "mm"))) +
-  labs(x = "\nAge interval (years)",
+  labs(x = "\nAge group (years)",
        y = "Annual parasite incidence per 1000\n")
 
 age_intervals_district
@@ -2006,9 +2008,8 @@ gresol_api <- temp |>
   select(year_dx, province, city, g, case, api) |> 
   mutate(year_dx = factor(year_dx))
 
-model_gresol <- lm(log(api) ~ 1 + g + year_dx, data = gresol_api)
-broom::tidy(model_gresol)
-performance::check_model(model_gresol)
+## 2019-2020 district-specific Gini index
+gresol_api |>  write_rds(file = here::here("0-data", "gini-district.rds"))
 
 fig_gresol <- gresol_api |> 
   ggplot(aes(x = api, y = g)) +
