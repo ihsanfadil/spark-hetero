@@ -81,7 +81,7 @@ time_series_plotmonth <- add_pop %>%
 
 # Plot
 by_month <- time_series_plotmonth %>% 
-  filter(year != 2010) %>% 
+  filter(year != 2010) %>%
   ggplot(aes(x = date,
              y = api,
              group = province,
@@ -133,6 +133,7 @@ prop_vivax <- esismal %>%
 prop_vivax_by_province <- prop_vivax %>% 
   ggplot(aes(x = week_dx,
              y = prop_pv)) +
+  geom_hline(yintercept = 0.5, linetype = "dashed", color = "gray") +
   geom_line(aes(colour = year_dx),
             size = 1.3, alpha = 0.8) +
   facet_grid(rows = vars(province)) +
@@ -2008,6 +2009,7 @@ gresol_api <- temp |>
 
 ## 2019-2020 district-specific Gini index
 gresol_api |>  write_rds(file = here::here("0-data", "gini-district.rds"))
+gresol_api <-  read_rds(file = here::here("0-data", "gini-district.rds"))
 
 fig_gresol <- gresol_api |> 
   ggplot(aes(x = api, y = g)) +
