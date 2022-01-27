@@ -129,8 +129,7 @@ d_summary <- d |>
   pivot_longer(cols = starts_with('P. '),
                names_to = 'sp',
                values_to = 'cases') |> 
-  mutate(api = 1000 * (cases / pop)) |> 
-  select(-pop)
+  mutate(api = 1000 * (cases / pop))
 
   # pivot_wider(names_from = age_group,
   #             values_from = pop) |> 
