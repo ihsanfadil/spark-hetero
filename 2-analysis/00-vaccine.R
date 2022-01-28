@@ -129,7 +129,19 @@ d_summary <- d |>
   pivot_longer(cols = starts_with('P. '),
                names_to = 'sp',
                values_to = 'cases') |> 
-  mutate(api = 1000 * (cases / pop))
+  mutate(api = 1000 * (cases / pop)) |> 
+  ungroup() |> 
+  mutate(age_cat = ordered(age_cat, levels = c('[0, 5)',
+                                      '[5, 10)',
+                                      '[10, 15)',
+                                      '[15, 65)',
+                                      '[65, ∞)'),
+                           labels = c('[0, 5)',
+                                      '[5, 10)',
+                                      '[10, 15)',
+                                      '[15, 65)',
+                                      '[65, ∞)'))) |> 
+  arrange(province, district, year, age_cat)
 
   # pivot_wider(names_from = age_group,
   #             values_from = pop) |> 
